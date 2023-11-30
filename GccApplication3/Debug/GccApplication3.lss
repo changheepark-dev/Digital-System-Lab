@@ -473,6 +473,7 @@ ISR(TIMER3_COMPA_vect) {
  2d6:	9f 93       	push	r25
  2d8:	ef 93       	push	r30
  2da:	ff 93       	push	r31
+	// 시계
 	s++;
  2dc:	80 91 11 01 	lds	r24, 0x0111	; 0x800111 <s>
  2e0:	90 91 12 01 	lds	r25, 0x0112	; 0x800112 <s+0x1>
@@ -516,10 +517,10 @@ unsigned int front[7] = {0};
 ISR(TIMER3_COMPA_vect) {
  346:	20 e0       	ldi	r18, 0x00	; 0
  348:	1b c0       	rjmp	.+54     	; 0x380 <__vector_26+0xbe>
-	if (s > 59) {m++, s = 0;}
 	if (m > 59) {h++, m = 0;}
 	if (h > 23) {h = 0;}
 
+	// 경과 시간 측정
 	for (char a = 0 ; a < 7 ; a++) {
 		if (average[a] <= (average_count * standard / 100)) {
  34a:	82 2f       	mov	r24, r18
@@ -552,11 +553,11 @@ ISR(TIMER3_COMPA_vect) {
  378:	fe 4f       	sbci	r31, 0xFE	; 254
  37a:	11 82       	std	Z+1, r1	; 0x01
  37c:	10 82       	st	Z, r1
-	s++;
 	if (s > 59) {m++, s = 0;}
 	if (m > 59) {h++, m = 0;}
 	if (h > 23) {h = 0;}
 
+	// 경과 시간 측정
 	for (char a = 0 ; a < 7 ; a++) {
  37e:	2f 5f       	subi	r18, 0xFF	; 255
  380:	27 30       	cpi	r18, 0x07	; 7
@@ -841,6 +842,8 @@ int Watch(unsigned int y) {
  564:	80 ef       	ldi	r24, 0xF0	; 240
 
 
+
+
 int main(void){
 	DDRB=0xf0;
  566:	87 bb       	out	0x17, r24	; 23
@@ -854,9 +857,9 @@ int main(void){
  570:	8c b1       	in	r24, 0x0c	; 12
  572:	8c b9       	out	0x0c, r24	; 12
 	
-	MCU_Init();					//LCD 사용을 위한 MCU 설정
+	MCU_Init();
  574:	c7 dd       	rcall	.-1138   	; 0x104 <MCU_Init>
-	LCDInit();					//LCD 사용을 위한 초기화 설정
+	LCDInit();
  576:	ed dd       	rcall	.-1062   	; 0x152 <LCDInit>
  578:	c4 e0       	ldi	r28, 0x04	; 4
 	
@@ -1055,7 +1058,7 @@ int main(void){
  6e0:	90 40       	sbci	r25, 0x00	; 0
  6e2:	e1 f7       	brne	.-8      	; 0x6dc <main+0x178>
  6e4:	00 c0       	rjmp	.+0      	; 0x6e6 <main+0x182>
-	LCDInit();					//LCD 사용을 위한 초기화 설정
+	LCDInit();
 	
 	// 시간 설정
 	static char string8[]="set Watch       ";
@@ -1077,7 +1080,9 @@ int main(void){
 	LCDInit();
  6f2:	80 91 30 01 	lds	r24, 0x0130	; 0x800130 <measurement>
 	
+	// main
 	while(1){
+		// 초음파 측정
 		if (measurement == 1) {
  6f6:	81 30       	cpi	r24, 0x01	; 1
  6f8:	09 f0       	breq	.+2      	; 0x6fc <main+0x198>
@@ -1090,7 +1095,7 @@ int main(void){
  704:	83 b1       	in	r24, 0x03	; 3
  706:	80 68       	ori	r24, 0x80	; 128
 			
-			PORTE |= (1<<TRIG);     //Trig=HIGH -> 거리 측정 명령 시작
+			PORTE |= (1<<TRIG);
  708:	83 b9       	out	0x03, r24	; 3
  70a:	25 e3       	ldi	r18, 0x35	; 53
  70c:	2a 95       	dec	r18
@@ -1104,7 +1109,7 @@ int main(void){
  710:	00 00       	nop
  712:	83 b1       	in	r24, 0x03	; 3
  714:	8f 77       	andi	r24, 0x7F	; 127
-			_delay_us(10);			//10us동안 유지
+			_delay_us(10);
 			PORTE &= ~(1<<TRIG);
  716:	83 b9       	out	0x03, r24	; 3
  718:	08 9b       	sbis	0x01, 0	; 1
@@ -1191,11 +1196,8 @@ int main(void){
  788:	13 be       	out	0x33, r1	; 51
 			measurement = 0;
  78a:	10 92 30 01 	sts	0x0130, r1	; 0x800130 <measurement>
-		
-		
-		
-		//Watch(1);
-		
+		}
+
 		LCDMove(0,0);
  78e:	60 e0       	ldi	r22, 0x00	; 0
  790:	80 e0       	ldi	r24, 0x00	; 0
@@ -1262,7 +1264,7 @@ int main(void){
  7ea:	f2 dc       	rcall	.-1564   	; 0x1d0 <LCDMove>
  7ec:	80 91 26 01 	lds	r24, 0x0126	; 0x800126 <check>
  7f0:	90 e0       	ldi	r25, 0x00	; 0
-		tNum(check);
+		tNum(check);	
  7f2:	e7 dd       	rcall	.-1074   	; 0x3c2 <tNum>
  7f4:	7e cf       	rjmp	.-260    	; 0x6f2 <main+0x18e>
 
@@ -1270,7 +1272,6 @@ int main(void){
  7f6:	40 d0       	rcall	.+128    	; 0x878 <__fp_cmp>
  7f8:	08 f4       	brcc	.+2      	; 0x7fc <__cmpsf2+0x6>
  7fa:	81 e0       	ldi	r24, 0x01	; 1
-		
 	}
  7fc:	08 95       	ret
 

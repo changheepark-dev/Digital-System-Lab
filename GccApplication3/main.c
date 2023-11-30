@@ -7,7 +7,7 @@
 // setting ///////////////////////////////////////////////////////////////////////////////
 // time average
 #define measurement_time 0.2								// 0.1 ~ 4 [s]
-unsigned char time_average[10];
+unsigned char time_average[10];								// 시간 평균 갯수
 #define average_count 10									// 배렬 선언과 동일한 값
 
 // sensor
@@ -16,7 +16,7 @@ unsigned char time_average[10];
 #define interval 700										// 측정 간격 5 ~ 2700 [mm]
 
 //measurement
-#define standard 50											// %
+#define standard 50											// 0 ~ 100[%], 측정 민감도 (낮을수록 늦게 상승, 빨리 감소)
 #define night_period
 #define daytime_period
 
@@ -61,11 +61,13 @@ void measurement_time_Init() {						// 초음파 계측 주기 타이머
 int h = 12, m = 30, s = 30;
 unsigned int front[7] = {0};
 ISR(TIMER3_COMPA_vect) {
+	// 시계
 	s++;
 	if (s > 59) {m++, s = 0;}
 	if (m > 59) {h++, m = 0;}
 	if (h > 23) {h = 0;}
 
+	// 경과 시간 측정
 	for (char a = 0 ; a < 7 ; a++) {
 		if (average[a] <= (average_count * standard / 100)) {
 			front[a]++;
@@ -110,14 +112,16 @@ int Watch(unsigned int y) {
 }
 
 
+
+
 int main(void){
 	DDRB=0xf0;
 	DDRE=0x80;
 	PORTE = 0x7f;
 	UDR0 |= 0x00;
 	
-	MCU_Init();					//LCD 사용을 위한 MCU 설정
-	LCDInit();					//LCD 사용을 위한 초기화 설정
+	MCU_Init();
+	LCDInit();
 	
 	// 시간 설정
 	static char string8[]="set Watch       ";
@@ -166,13 +170,15 @@ int main(void){
 	measurement_time_Init();
 	LCDInit();
 	
+	// main
 	while(1){
+		// 초음파 측정
 		if (measurement == 1) {
 			check = 0;
 			TCCR0 = 7;
 			
-			PORTE |= (1<<TRIG);     //Trig=HIGH -> 거리 측정 명령 시작
-			_delay_us(10);			//10us동안 유지
+			PORTE |= (1<<TRIG);
+			_delay_us(10);
 			PORTE &= ~(1<<TRIG);
 			
 			while (!(PINE & (1<<0))) {}
@@ -190,15 +196,7 @@ int main(void){
 			TCCR0 = 0;
 			measurement = 0;
 		}
-		
-		
-		
-		
-		
-		
-		
-		//Watch(1);
-		
+
 		LCDMove(0,0);
 		tNum(front[0]);
 		LCDMove(0,4);
@@ -216,7 +214,18 @@ int main(void){
 		LCDMove(1,8);
 		tNum(front[6]);
 		LCDMove(1,12);
-		tNum(check);
-		
+		tNum(check);	
 	}
 }
+
+// 후면 인터럽트
+// 버저 sos
+
+// lcd 시간 + 위치
+
+// 낮 30초
+
+// 밤 10초
+
+// 감지되면 버저
+// 뭐 할지
