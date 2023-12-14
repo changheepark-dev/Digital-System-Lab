@@ -18,9 +18,9 @@ unsigned char time_average[10];								// 시간 평균 갯수
 
 //measurement
 #define standard 50											// 0 ~ 100[%], 측정 민감도 (낮을수록 늦게 상승, 빨리 감소)
-#define night_period 20										// 0 ~ 65535 [s] 전면 센서 밤에 on 시간
-#define daytime_period 30									// 0 ~ 65535 [s] 전면 센서 낮에 on 시간
-#define person 10											// 0 ~ 65535 [s] 동행자 인지 판단 시간
+#define night_period 10										// 0 ~ 65535 [s] 전면 센서 밤에 on 시간
+#define daytime_period 15									// 0 ~ 65535 [s] 전면 센서 낮에 on 시간
+#define person 5											// 0 ~ 65535 [s] 동행자 인지 판단 시간
 ///////////////////////////////////////////////////////////////////////////////
 // time average
 unsigned char count = 0;
@@ -57,7 +57,7 @@ void measurement_time_Init() {						// 초음파 계측 주기 타이머
 	sei();
 }
 
-unsigned char h = 12, m = 30, s = 30, l;
+unsigned char h = 12, m = 30, s = 30, l = 0;
 unsigned int front[7] = {0};
 ISR(TIMER3_COMPA_vect) {
 	// 시계
@@ -80,7 +80,7 @@ void time_Init() {									// 시간 타이머
 	TCCR3A = (0<<WGM11) | (0<<WGM10);
 	TCCR3B = (0<<WGM13) | (1<<WGM12) | (1<<CS12) | (0<<CS11) | (1<<CS10);
 	ETIMSK |= (1 << OCIE3A);
-	OCR3A = 5000;//15624;
+	OCR3A = 15624;
 	sei();
 }
 
@@ -92,9 +92,6 @@ ISR(INT0_vect) {
 }
 ISR(INT1_vect) {
 	if (ckd == 0) {ckd = 6;}
-}
-ISR(INT2_vect) {
-	if (ckd == 0) {ckd = 3;} // 사용 x
 }
 ISR(INT3_vect) {
 	if (ckd == 0) {ckd = 7;}
@@ -113,12 +110,12 @@ ISR(INT7_vect) {
 }
 
 void INTR_Init() {
-	DDRD = 0x00;
-	PORTD = 0xff;
+	DDRD = 0x04;
+	PORTD = 0xfb;
 	
 	EICRA = 0xff;		//하강엣지 트리거
 	EICRB = 0xff;
-	EIMSK = 0xff;
+	EIMSK = 0xfb;
 	
 	DDRE = 0x08;
 	PORTE = 0xf7;
@@ -278,10 +275,12 @@ int main(void){
 		
 		// 전면 센서 작동
 		int largest = 1, secondLargest = 1;
+		char cc;
 		for (char a = 0; a < 7 ; a++) {
 			if (front[a] >= largest) {
 				secondLargest = largest;
 				largest = front[a];
+				cc = a + 1;
 			}
 			else if (front[a] > secondLargest && front[a] < largest) {
 				secondLargest = front[a];
@@ -290,14 +289,38 @@ int main(void){
 		if ((h >= 19) || (h < 7)) {
 			if ((largest > night_period) && secondLargest < person) {
 				PORTB = 0xf0;
+				
+				// 통신
+				PORTD = 0xfb;
+				double com = 159343 + (1.5923*l + 0.152*cc)*1000;
+				_delay_us(com);
+				PORTD = 0xff;
 			}
-			else {PORTB = 0x00;}
+			else {
+				PORTB = 0x00;
+				
+				PORTD = 0xfb;
+				_delay_us(100);
+				PORTD = 0xff;
+			}
 		}
 		else {
 			if ((largest > daytime_period) && secondLargest < person) {
 				PORTB = 0xf0;
+				
+				// 통신
+				PORTD = 0xfb;
+				double com = 159343 + (1.5923*l + 0.152*cc)*1000;
+				_delay_us(com);
+				PORTD = 0xff;
 			}
-			else {PORTB = 0x00;}
+			else {
+				PORTB = 0x00;
+				
+				PORTD = 0xfb;
+				_delay_us(100);
+				PORTD = 0xff;
+			}
 		}
 				
 		// 후면 센서 작동
@@ -306,6 +329,12 @@ int main(void){
 			string2[15] = '0'+(ckd %10);
 			LCDMove(0,0);
 			LCDPuts(string2);
+			
+			// 통신
+			PORTD = 0xfb;
+			double com = 637099 + (1.5925*l + 0.169*ckd)*1000;
+			_delay_us(com);
+			PORTD = 0xff;
 			
 			for (char a = 0 ; a < 9 ; a++) {
 				if ((PINB & 0x0f) != 15) {
@@ -324,9 +353,7 @@ int main(void){
 			}
 			_delay_ms(200);
 		}
-		
-		
-		
+				
 		// test display
 		static char string3[]="sonic";
 		static char string4[]="filter";
@@ -334,7 +361,6 @@ int main(void){
 		static char string6[]="motion";
 		static char string7[]="largest : ";
 		static char string9[]="second  : ";
-		
 		
 		unsigned char x[] = {7, 10, 13, 0, 3, 6, 9};
 		unsigned char y[] = {0, 0, 0, 1, 1, 1, 1};
